@@ -14,8 +14,7 @@
 #define irCode 0xAC
 
 // this is the pin mapping for the 15 notes
-// will be updated once the wires are in place
-const byte notes[15] = {5,6,7,8,9,10,11,12,13,14,15,16,17,18,19};
+const byte notes[15] = {7,5,10,12,14,16,18,8,6,9,11,13,15,17,19};
 
 void setup() {
   // set up LED pins
@@ -27,15 +26,21 @@ void setup() {
   // set up IR
   irBegin();
 
+  turnOn(0);
   // Start serial, spam ack request until ack is received
   Serial.begin(9600);
-  delay(500); // wait a moment to let the Teensy get ready
-  while (Serial.available() <= 0) {
-    Serial.print('A');
-    delay(300);
+  delay(100); // wait a moment to let the Teensy get ready
+  byte response = 0;
+  while (response < 1) {
+    Serial.write(0xAC);
+    delay(100);
+    if(Serial.available() > 0){
+      if(Serial.read() == 0xAC){
+        response = 1;
+      }
+    }
   }
-  Serial.read(); // clear the ack
-  
+  turnOff();
 }
 
 /*
@@ -60,9 +65,9 @@ void loop() {
  * If it is correct, continue.
  * The second byte contains the number of the note to be played.
  * As long as the key is held down the second byte will be sent
- * every 200ms. When the key is released, a 0xFF byte will be sent.
+ * every 60ms. When the key is released, a 0xFF byte will be sent.
  * The 0xFF means to turn the note off and return.
- * If the second byte is not received for 250ms, something went wrong
+ * If the second byte is not received for 80ms, something went wrong
  * so turn off the note and return.
  */
 void keyboardInMode(){
@@ -74,7 +79,7 @@ void keyboardInMode(){
   // wait for the next byte to arrive
   unsigned long timeout = millis();
   while(irAvailable() == 0){
-    if(millis() - timeout > 250){
+    if(millis() - timeout > 80){
       // It took too long. Just start over.
       return;
     }
@@ -95,7 +100,7 @@ void keyboardInMode(){
   while(true){
     timeout = millis();
     while(irAvailable() == 0){
-      if(millis() - timeout > 250){
+      if(millis() - timeout > 80){
         // It took too long. Turn off things and return
         Serial.write(0xFF);
         turnOff();
@@ -170,4 +175,3 @@ void turnOff(){
     digitalWrite(notes[i], LOW);
   }
 }
-
